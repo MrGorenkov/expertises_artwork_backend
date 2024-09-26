@@ -115,6 +115,7 @@ def paintings_list(request):
     })
 
 def painting_detail(request, id):
+    
     # Детальная информация о картине
     for painting in paintings:
         if painting['id'] == id:
