@@ -115,7 +115,6 @@ def paintings_list(request):
     })
 
 def painting_detail(request, id):
-    
     # Детальная информация о картине
     for painting in paintings:
         if painting['id'] == id:
@@ -125,6 +124,8 @@ def painting_detail(request, id):
     return render(request, 'painting_detail.html')
 
 def view_order(request):
+
+    
     # Отображение содержимого заявки
     for painting in order_list:
         painting['img_path'] = f'http://{MINIO_HOST}:{MINIO_PORT}/{MINIO_DIR}/{painting["img_name"]}'
