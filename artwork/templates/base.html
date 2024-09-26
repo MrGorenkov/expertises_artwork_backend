@@ -1,0 +1,24 @@
+{% load static %}
+<!doctype html>
+<html lang="ru" class="h-100">
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<header>
+    <div class="logo">
+        <a href="/"><img src='http://127.0.0.1:9000/web-img/icon.png' class="icon-img" alt="Логотип компании"></a>
+        <span>ИСТОРИЯ ЖИВОПИСИ</span>
+    </div>
+    <div class="logo-description"> 
+        <p>Картины для экспертизы</p>
+    </div>
+</header>
+<body>
+    <div class="top_head">
+        {% block content_head %}{% endblock %}
+    </div>
+    {% block content_body %}{% endblock %}
+</body>
+</html>

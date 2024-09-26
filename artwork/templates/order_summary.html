@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Сформированная заявка{% endblock %}
+
+{% block content_body %}
+    <div class="order-container">
+        <h1 class="order-title">Сформированная заявка</h1>
+
+        <div class="order-details">
+            <h3>Картины в вашей заявке:</h3>
+
+            <div class="order-items">
+                {% for painting in data %}
+                <div class="order-item">
+                    <div class="item-image">
+                        <img src="{{ painting.img_path }}" alt="{{ painting.title }}" class="component-img">
+                    </div>
+                    <div class="item-details">
+                        <h5>{{ painting.title }}</h5>
+                        <p class="item-artist">{{ painting.artist }}</p>
+                        <p class="item-price">{{ painting.price }} руб.</p>
+                        <a href="{% url 'painting_detail' painting.id %}" class="item-more">Подробнее</a>
+                    </div>
+                    <div class="item-quantity">
+                        <button class="qty-btn">-</button>
+                        <span>1</span>
+                        <button class="qty-btn">+</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
