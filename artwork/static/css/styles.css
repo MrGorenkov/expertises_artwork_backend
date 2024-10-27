@@ -79,8 +79,8 @@ header {
     opacity: 0.8;
 }
 
-/* Общий контейнер корзины с плавным переходом */
-.busket {
+/* Общий контейнер для заявок с плавным переходом */
+.expertise_list {
     position: absolute;
     right: 20px;
     top: 50%;
@@ -90,13 +90,13 @@ header {
     transition: transform 0.3s ease; 
 }
 
-/* Изображение корзины */
-.busket img {
+/* Изображение списка экспертизы */
+.expertise_list img {
     height: 50px;
 }
 
 /* Счетчик товаров */
-.busket_count {
+.expertise_count {
     position: absolute;
     top: 1px;
     right: 1px;
@@ -112,11 +112,11 @@ header {
     transition: background-color 0.3s ease; 
 }
 
-.busket:hover {
+.expertise_list:hover {
     transform: scale(1); 
 }
 
-.busket:hover .busket_count {
+.expertise_list:hover .expertise_count {
     background-color:  #a9be71; 
 }
 
@@ -235,17 +235,13 @@ header {
     color: #A66F2B;
     font-size: 18px;
     text-decoration: none;
+    position: relative;
+    left: -450px; /* Сдвиг влево на 10px */
 }
+
 
 .item-more:hover {
     text-decoration: underline;
-}
-
-/* Кнопки для изменения количества товара */
-.item-quantity {
-    display: flex;
-    align-items: center;
-    margin-left: 600px;
 }
 
 .qty-btn {
@@ -271,7 +267,7 @@ header {
 /* ------------------------------------------------------------------------- */
 
 /* Стили для страницы с деталями картины */
-.component-detail {
+.painting-detail {
     display: flex; /* Размещаем картину и информацию рядом */
     align-items: flex-start;
     justify-content: flex-start;
@@ -279,45 +275,43 @@ header {
     padding: 20px;
 }
 
-.component-img {
+.painting-img {
     width: 750px; /* Ширина изображения (можно изменить по желанию) */
     height: 600px; 
     object-fit: cover;
     margin-right: 50px; /* Отступ между изображением и информацией */
 }
 
-.component-info {
+.painting-info {
     max-width: 60%; /* Максимальная ширина информации */
 }
 
-.component-info h1 {
+.painting-info h1 {
     font-size: 26px; 
     color: #A66F2B; /* Цвет заголовка */
     margin-bottom: 10px;
     font-weight: bold; /* Жирный шрифт */
 }
 
-
-.component-info p {
+.painting-info p {
     font-size: 18px; 
     line-height: 1.5;
     color: #333; /* Цвет описания */
 }
 
-.component-info p strong {
+.painting-info p strong {
     font-size: 24px; 
     color: #A66F2B; 
 }
 
-.component-info .volume-info {
+.painting-info .volume-info {
     font-size: 24px; 
     font-weight: bold;
     margin-top: 20px;
 }
 
-.component-info .price-info {
+.painting-info .price-info {
     font-size: 24px; 
     font-weight: bold;
     margin-top: 20px;
 }
-

@@ -1,134 +1,123 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
+from django.db import connection
+from artwork.models import Expertise, OrderItem, Painting
+from django.db.models import Q
 
-MINIO_HOST = '127.0.0.1'
-MINIO_PORT = 9000
-MINIO_DIR = 'web-img'
-
-# Данные о картинах
-paintings = [
-    {
-        'id': 0,
-        'title': "Постоянство Памяти",
-        'img_name': "memory.png",
-        'artist': "Сальвадор Дали",
-        'price': 83900,
-        'short_description': "Известная картина Сальвадора Дали, изображающая плавящиеся часы.",
-        'description': "Картина 'Постоянство памяти' (1931) Сальвадора Дали является одной из самых узнаваемых работ сюрреализма. Она изображает плавящиеся карманные часы в пейзаже, который символизирует относительность времени и нестабильность реальности."
-    },
-    {
-        'id': 1,
-        'title': "Крик",
-        'img_name': "krik.png",
-        'artist': "Эдвард Мунк",
-        'price': 87900,
-        'short_description': "Эмоциональная картина Эдварда Мунка, представляющая внутренние страхи и тревоги.",
-        'description': "Картина 'Крик' (1893) Эдварда Мунка изображает фигуру на мосту с ужасающим криком, выражая человеческое состояние отчаяния и страха."
-    },
-    {
-        'id': 2,
-        'title': "Звездная ночь",
-        'img_name': "starry_night.png",
-        'artist': "Винсент Ван Гог",
-        'price': 92900,
-        'short_description': "Одна из самых известных картин Ван Гога, изображающая вихри ночного неба.",
-        'description': "'Звездная ночь' (1889) — это шедевр Ван Гога, где он изображает завораживающее ночное небо, полное вихрей и светящихся звезд, создавая уникальное представление о природе."
-    },
-    {
-        'id': 3,
-        'title': "Афинская школа",
-        'img_name': "school.png",
-        'artist': "Рафаэль",
-        'price': 71900,
-        'short_description': "Фреска Рафаэля, изображающая знаменитых философов античности.",
-        'description': "Фреска 'Афинская школа' (1511) Рафаэля изображает Платона и Аристотеля в центре, окруженных философами и учеными, представляя триумф разума и научной мысли."
-    },
-    {
-        'id': 4,
-        'title': "Ночной дозор",
-        'img_name': "night.png",
-        'artist': "Рембрандт",
-        'price': 77900,
-        'short_description': "Известная картина Рембрандта, изображающая вооруженную городскую милицию.",
-        'description': "'Ночной дозор' (1642) — это шедевр Рембрандта, который изображает членов амстердамской стрелковой роты, подготовленных к выполнению своего долга. Картина выделяется своим драматизмом и светотеневым контрастом."
-    },
-    {
-        'id': 5,
-        'title': "Сотворение Адама",
-        'img_name': "adam.png",
-        'artist': "Микеланджело",
-        'price': 103900,
-        'short_description': "Фреска Микеланджело, изображающая момент создания человека.",
-        'description': "'Сотворение Адама' (1512) — одна из фресок Сикстинской капеллы, изображающая библейскую сцену, где Бог протягивает руку к Адаму, даруя ему жизнь. Это один из самых узнаваемых образов в истории искусства."
-    }
-]
-
-
-order_list = [
-    {
-        'id': 0,
-        'title': "Постоянство Памяти",
-        'img_name': "memory.png",
-        'artist': "Сальвадор Дали",
-        'price': 83900,
-        'short_description': "Известная картина Сальвадора Дали, изображающая плавящиеся часы.",
-        'description': "Картина 'Постоянство памяти' (1931) Сальвадора Дали является одной из самых узнаваемых работ сюрреализма. Она изображает плавящиеся карманные часы в пейзаже, который символизирует относительность времени и нестабильность реальности."
-    },
-    {
-        'id': 1,
-        'title': "Крик",
-        'img_name': "krik.png",
-        'artist': "Эдвард Мунк",
-        'price': 87900,
-        'short_description': "Эмоциональная картина Эдварда Мунка, представляющая внутренние страхи и тревоги.",
-        'description': "Картина 'Крик' (1893) Эдварда Мунка изображает фигуру на мосту с ужасающим криком, выражая человеческое состояние отчаяния и страха."
-    },
-    {
-        'id': 2,
-        'title': "Звездная ночь",
-        'img_name': "starry_night.png",
-        'artist': "Винсент Ван Гог",
-        'price': 92900,
-        'short_description': "Одна из самых известных картин Ван Гога, изображающая вихри ночного неба.",
-        'description': "'Звездная ночь' (1889) — это шедевр Ван Гога, где он изображает завораживающее ночное небо, полное вихрей и светящихся звезд, создавая уникальное представление о природе."
-    }
-]
-
+USER = 1
 
 def paintings_list(request):
+    """
+    Отображение страницы со списком всех картин
+    """
     # Получаем данные из строки поиска
-    search_query = request.GET.get('q', '').lower()
-    # Фильтрация по названию или цене
-    filtered_paintings = [
-        painting for painting in paintings
-        if search_query in painting['title'].lower() or search_query in str(painting['price'])
-    ]
-    # Формируем путь к изображениям для каждого элемента списка
-    for painting in filtered_paintings:
-        painting['img_path'] = f'http://{MINIO_HOST}:{MINIO_PORT}/{MINIO_DIR}/{painting["img_name"]}'
-    
-    # Рендерим шаблон с данными о картинах
-    return render(request, 'paintings_list.html', {'data':{
-        'paintings': filtered_paintings,
-        'search_query': search_query,
-        'order_count': len(order_list)
+    search_query = request.GET.get('painting_title', '').lower()
+
+    # Получаем заявку пользователя в статусе черновик, если такая существует
+    draft_order = Expertise.objects.filter(user=USER, status=Expertise.STATUS_CHOICES[0][0]).first()
+
+    # Фильтруем картины по заголовку, начинающемуся с поискового запроса
+    filtered_paintings = Painting.objects.filter(
+        title__istartswith=search_query) 
+
+    return render(request, 'paintings_list.html', {
+        'data': {
+            'paintings': filtered_paintings,
+            'search_query': search_query,
+            'order_count': draft_order.items.count() if draft_order else 0,
+            'order_id': draft_order.id if draft_order else 0
         }
     })
 
 def painting_detail(request, id):
-    # Детальная информация о картине
-    for painting in paintings:
-        if painting['id'] == id:
-            painting['img_path'] = f'http://{MINIO_HOST}:{MINIO_PORT}/{MINIO_DIR}/{painting["img_name"]}'
-            return render(request, 'painting_detail.html', {'painting': painting})
+    """
+    Отображение страницы с подробным описанием выбранной картины
+    """
+    painting = get_object_or_404(Painting, id=id)
+    return render(request, 'painting_detail.html', {'painting': painting})
 
-    return render(request, 'painting_detail.html')
+def view_order(request, order_id):
+    """
+    Отображение страницы заявки на экспертизу
+    """
+    expertise_order = Expertise.objects.filter(
+        ~Q(status=Expertise.STATUS_CHOICES[2][0]), id=order_id).first()
 
-def view_order(request):
+    if expertise_order is None:
+        return redirect('paintings_list')
 
-    
-    # Отображение содержимого заявки
-    for painting in order_list:
-        painting['img_path'] = f'http://{MINIO_HOST}:{MINIO_PORT}/{MINIO_DIR}/{painting["img_name"]}'
-        print(f"Image path: {painting['img_path']}")  # Для отладки
+    order_items = OrderItem.objects.filter(order=expertise_order).select_related('painting')
 
-    return render(request, 'order_summary.html', {'data': order_list})
+    detailed_order = [
+        {
+            'id': item.painting.id,
+            'title': item.painting.title,
+            'img_path': item.painting.img_path
+        }
+        for item in order_items
+    ]
+
+    return render(request, 'order_summary.html', {
+        'data': {
+            'order_id': expertise_order.id,
+            'items': detailed_order
+        }
+    })
+
+def get_or_create_order(user_id):
+    """
+    Получение заявки или создание новой, если её нет
+    """
+    draft_order = Expertise.objects.filter(user_id=user_id, status=Expertise.STATUS_CHOICES[0][0]).first()
+
+    if draft_order:
+        return draft_order.id
+
+    new_order = Expertise(user_id=user_id, status=Expertise.STATUS_CHOICES[0][0])
+    new_order.save()
+    return new_order.id
+
+def add_to_order(request):
+    """
+    Добавление картины в заявку на экспертизу
+    """
+    if request.method != "POST":
+        return redirect('paintings_list')
+
+    painting_id = request.POST.get("add_to_order")
+
+    if painting_id:
+        order_id = get_or_create_order(USER)
+        item = OrderItem(order_id=order_id, painting_id=painting_id)
+        item.save()
+
+    return paintings_list(request)
+
+def delete_order(request, order_id):
+    """
+    Удаление заявки на экспертизу
+    """
+    sql = "UPDATE artwork_expertise SET status = %s WHERE id = %s"
+    with connection.cursor() as cursor:
+        cursor.execute(sql, (Expertise.STATUS_CHOICES[2][0], order_id))
+
+    return redirect('paintings_list')
+
+def delete_order_item(request, order_id):
+    """
+    Удаление картины из заявки на экспертизу
+    """
+    if request.method != "POST":
+        return redirect('view_order', order_id=order_id)
+
+    action = request.POST.get("action")
+
+    if action == "delete_order":
+        delete_order(request, order_id)
+        return redirect('paintings_list')
+
+    elif action.startswith("delete_item_"):
+        item_id = action.split("_")[2]
+        item = OrderItem.objects.get(id=item_id, order_id=order_id)
+        item.delete()
+
+    return view_order(request, order_id)
