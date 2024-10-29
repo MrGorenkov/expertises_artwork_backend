@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from artwork.models import Expertise, OrderItem, Painting
+from django.contrib import messages
 
 def paintings_list(request):
     """Отображение списка картин."""
@@ -61,7 +62,9 @@ def add_to_order(request):
             painting = get_object_or_404(Painting, id=painting_id)
             draft_order, created = get_or_create_order(request.user)
             OrderItem.objects.get_or_create(expertise=draft_order, painting=painting)
-            return redirect('view_order', order_id=draft_order.id)
+
+            # Добавляем сообщение об успешном добавлении
+            messages.success(request, f'Картина "{painting.title}" была добавлена в корзину!')
 
     return redirect('paintings_list')
 
@@ -80,7 +83,8 @@ def get_or_create_order(user):
 def delete_order_item(request, order_id, item_id):
     """View to delete an item from the order."""
     if request.method == "POST":
-        order_item = get_object_or_404(OrderItem, id=item_id, order__id=order_id) 
+        # Исправляем здесь: используем expertise__id вместо order__id
+        order_item = get_object_or_404(OrderItem, id=item_id, expertise__id=order_id) 
         order_item.delete()  
         return redirect('view_order', order_id=order_id)  
 
