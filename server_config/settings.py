@@ -126,6 +126,18 @@ STATICFILES_DIRS = [
     BASE_DIR / 'artwork/static',
 ]
 
+# Media settings (for Minio)
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_URL = '/media/'
+
+# Minio settings
+AWS_ACCESS_KEY_ID = 'Minio.124'
+AWS_SECRET_ACCESS_KEY = 'Minio.124'
+AWS_STORAGE_BUCKET_NAME = 'web-img'
+AWS_S3_ENDPOINT_URL = 'http://localhost:9001'  # Замените на URL Minio-сервера
+
+AWS_S3_USE_SSL = False  # Установите False, если Minio работает по HTTP
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

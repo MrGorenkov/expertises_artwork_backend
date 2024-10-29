@@ -37,7 +37,11 @@ class Expertise(models.Model):
 
     def __str__(self):
         return f"Заказ №{self.pk} от {self.user.username}"
-
+    
+    def delete(self, *args, **kwargs):
+        # Удаляем все связанные OrderItem перед удалением Expertise
+        self.items.all().delete()
+        super().delete(*args, **kwargs)
 
     class Meta:
         verbose_name = "Заказ"
@@ -47,15 +51,17 @@ class Expertise(models.Model):
 
 # Модель для элементов в заказе
 class OrderItem(models.Model):
-    expertise = models.ForeignKey(Expertise, on_delete=models.DO_NOTHING, related_name="items", verbose_name="Заказ")
+    expertise = models.ForeignKey(Expertise, on_delete=models.SET_NULL, null=True, related_name="items", verbose_name="Заказ")
+   
     painting = models.ForeignKey(Painting, on_delete=models.DO_NOTHING, verbose_name="Картина")
     comment = models.TextField(default="", blank=True, verbose_name="Комментарий")
 
     def __str__(self):
-        return f"{self.painting.title} в заказе №{self.expertise.pk}"
+        return f"{self.painting.title} в заказе №{self.expertise.pk if self.expertise else 'удален'}"
 
     class Meta:
         verbose_name = "Элемент заказа"
         verbose_name_plural = "Элементы заказа"
         db_table = 'order_item'
         unique_together = ('expertise', 'painting')
+

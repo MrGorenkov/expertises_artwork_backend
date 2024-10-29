@@ -4,47 +4,46 @@
 {% block title %}Список картин{% endblock %}
 
 {% block content_head %}
-    <div class="container">
-        <form method="get">
-            <div class="search_bar">
-                <input type="text" name="painting_title" placeholder="Поиск по названию" value="{{ search_query }}">
-                <button type="submit" id="search">
-                    <img src="{% static 'img/search.png' %}" alt="Иконка поиска">
-                </button>
-            </div>
-        </form>
-        <div class="expertise {% if data.order_count == 0 %}inactive{% endif %}">
-            {% if data.order_count > 0 %}
-                <a href="{% url 'order_summary' data.order_id %}">
-                    <img src="{% static 'http://172.19.0.6:9000/web-img/cart.png' %}" alt="Корзина">
-                </a>
-                <span class="expertise_count">{{ data.order_count }}</span>
-            {% else %}
-                <span><img src="{% static 'http://172.19.0.6:9000/web-img/cart.png' %}" alt="Корзина"></span>
-            {% endif %}
+<div class="container">
+    <form method="get">
+        <div class="search_bar">
+            <input type="text" name="painting_title" placeholder="Поиск по названию" value="{{ search_query }}">
+            <button type="submit" id="search">
+                <img src="{% static 'img/search.png' %}" alt="Иконка поиска">
+            </button>
         </div>
+    </form>
+    <div class="order_list {% if data.order_count == 0 %}inactive{% endif %}">
+        {% if data.order_count > 0 %}
+            <a href="{% url 'view_order' data.order_id %}">
+                <img src="{% static 'img/cart.png' %}" alt="Корзина">
+                <span class="order_count">{{ data.order_count }}</span>
+            </a>
+        {% else %}
+            <span><img src="{% static 'img/cart.png' %}" alt="Корзина"></span>
+        {% endif %}
     </div>
+</div>
 {% endblock %}
 
 {% block content_body %}
-    <div class="container_cards">
-        <div class="row">
-            {% for painting in data.paintings %}
-                <div class="card">
-                    <a href="{% url 'painting_detail' painting.id %}">
-                        <img src="{{ painting.img_path }}" alt="{{ painting.title }}" class="card-img">
-                    </a>
-                    <div class="card-body">
-                        <h5 class="card-title">{{ painting.title }}</h5>
-                        <p class="card-description">{{ painting.short_description }}</p>
-                        
-                        <form method="post" action="{% url 'add_to_order' %}">
-                            {% csrf_token %}
-                            <button class="btn-add" name="add_to_order "value="{{ painting.id }}">Добавить</button>
-                        </form>
-                    </div>
+<div class="container_cards">
+    <div class="row">
+        {% for painting in data.paintings %}
+            <div class="card">
+                <a href="{% url 'painting_detail' painting.id %}">
+                    <img src="{{ painting.img_path }}" alt="{{ painting.title }}" class="card-img">
+                </a>
+                <div class="card-body">
+                    <h5 class="card-title">{{ painting.title }}</h5>
+                    <p class="card-description">{{ painting.short_description }}</p>
+                    <form method="post" action="{% url 'add_to_order' %}">
+                        {% csrf_token %}
+                        <button class="btn-add" name="add_to_order" value="{{ painting.id }}">Добавить</button>
+                    </form>
                 </div>
-            {% endfor %}
-        </div>
+            </div>
+        {% endfor %}
     </div>
+</div>
 {% endblock %}

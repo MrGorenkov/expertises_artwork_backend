@@ -1,123 +1,87 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db import connection
 from artwork.models import Expertise, OrderItem, Painting
-from django.db.models import Q
-
-USER = 1
 
 def paintings_list(request):
-    """
-    Отображение страницы со списком всех картин
-    """
-    # Получаем данные из строки поиска
+    """Отображение списка картин."""
     search_query = request.GET.get('painting_title', '').lower()
 
-    # Получаем заявку пользователя в статусе черновик, если такая существует
-    draft_order = Expertise.objects.filter(user=USER, status=Expertise.STATUS_CHOICES[0][0]).first()
+    # Получаем черновик заказа, если пользователь аутентифицирован
+    draft_order = Expertise.objects.filter(user=request.user, status=1).first() if request.user.is_authenticated else None
 
-    # Фильтруем картины по заголовку, начинающемуся с поискового запроса
-    filtered_paintings = Painting.objects.filter(
-        title__istartswith=search_query) 
-
+    # Рендерим шаблон, передавая данные
     return render(request, 'paintings_list.html', {
         'data': {
-            'paintings': filtered_paintings,
+            'paintings': Painting.objects.filter(title__icontains=search_query),
             'search_query': search_query,
-            'order_count': draft_order.items.count() if draft_order else 0,
-            'order_id': draft_order.id if draft_order else 0
+            'order_count': draft_order.items.count() if draft_order else 0,  # Количество элементов
+            'order_id': draft_order.id if draft_order else None
         }
     })
 
 def painting_detail(request, id):
-    """
-    Отображение страницы с подробным описанием выбранной картины
-    """
+    """Отображение страницы с подробным описанием картины."""
     painting = get_object_or_404(Painting, id=id)
     return render(request, 'painting_detail.html', {'painting': painting})
 
 def view_order(request, order_id):
-    """
-    Отображение страницы заявки на экспертизу
-    """
-    expertise_order = Expertise.objects.filter(
-        ~Q(status=Expertise.STATUS_CHOICES[2][0]), id=order_id).first()
+    """Отображение страницы с заявкой на экспертизу."""
+    if not request.user.is_authenticated:
+        return redirect('paintings_list')  # Перенаправляем на список картин
 
-    if expertise_order is None:
-        return redirect('paintings_list')
+    # Получаем заказ, проверяя статус
+    order = get_object_or_404(Expertise, id=order_id, user=request.user)
 
-    order_items = OrderItem.objects.filter(order=expertise_order).select_related('painting')
+    if order.status == 3:  # Статус "Удалено"
+        return redirect('paintings_list')  # Или используйте HttpResponseNotFound
 
-    detailed_order = [
-        {
-            'id': item.painting.id,
-            'title': item.painting.title,
-            'img_path': item.painting.img_path
-        }
-        for item in order_items
-    ]
+    order_items = order.items.select_related('painting')
+
+    # Получаем значение поиска из GET-запроса
+    search_query = request.GET.get('painting_title', '').lower()
+
+    # Применяем фильтрацию по названию картины
+    if search_query:
+        order_items = order_items.filter(painting__title__icontains=search_query)
 
     return render(request, 'order_summary.html', {
         'data': {
-            'order_id': expertise_order.id,
-            'items': detailed_order
+            'order_id': order.id,
+            
+            'items': order_items,
+            'search_query': search_query,  # Передаем значение поиска
         }
     })
 
-def get_or_create_order(user_id):
-    """
-    Получение заявки или создание новой, если её нет
-    """
-    draft_order = Expertise.objects.filter(user_id=user_id, status=Expertise.STATUS_CHOICES[0][0]).first()
-
-    if draft_order:
-        return draft_order.id
-
-    new_order = Expertise(user_id=user_id, status=Expertise.STATUS_CHOICES[0][0])
-    new_order.save()
-    return new_order.id
 
 def add_to_order(request):
-    """
-    Добавление картины в заявку на экспертизу
-    """
-    if request.method != "POST":
-        return redirect('paintings_list')
-
-    painting_id = request.POST.get("add_to_order")
-
-    if painting_id:
-        order_id = get_or_create_order(USER)
-        item = OrderItem(order_id=order_id, painting_id=painting_id)
-        item.save()
-
-    return paintings_list(request)
-
-def delete_order(request, order_id):
-    """
-    Удаление заявки на экспертизу
-    """
-    sql = "UPDATE artwork_expertise SET status = %s WHERE id = %s"
-    with connection.cursor() as cursor:
-        cursor.execute(sql, (Expertise.STATUS_CHOICES[2][0], order_id))
+    """Добавление выбранной картины в корзину и создание заявки."""
+    if request.method == "POST" and request.user.is_authenticated:
+        painting_id = request.POST.get("add_to_order")
+        if painting_id:
+            painting = get_object_or_404(Painting, id=painting_id)
+            draft_order, created = get_or_create_order(request.user)
+            OrderItem.objects.get_or_create(expertise=draft_order, painting=painting)
+            return redirect('view_order', order_id=draft_order.id)
 
     return redirect('paintings_list')
 
-def delete_order_item(request, order_id):
-    """
-    Удаление картины из заявки на экспертизу
-    """
-    if request.method != "POST":
-        return redirect('view_order', order_id=order_id)
+def delete_order(request, order_id):
+    """Удаление заказа."""
+    order = get_object_or_404(Expertise, id=order_id, user=request.user)  
+    order.status = 3  # Устанавливаем статус "Удалено"
+    order.save()
+    return redirect('paintings_list')
 
-    action = request.POST.get("action")
+def get_or_create_order(user):
+    """Получение или создание черновика заказа для пользователя."""
+    draft_order, created = Expertise.objects.get_or_create(user=user, status=1)
+    return draft_order, created
 
-    if action == "delete_order":
-        delete_order(request, order_id)
-        return redirect('paintings_list')
+def delete_order_item(request, order_id, item_id):
+    """View to delete an item from the order."""
+    if request.method == "POST":
+        order_item = get_object_or_404(OrderItem, id=item_id, order__id=order_id) 
+        order_item.delete()  
+        return redirect('view_order', order_id=order_id)  
 
-    elif action.startswith("delete_item_"):
-        item_id = action.split("_")[2]
-        item = OrderItem.objects.get(id=item_id, order_id=order_id)
-        item.delete()
-
-    return view_order(request, order_id)
+    return redirect('paintings_list')

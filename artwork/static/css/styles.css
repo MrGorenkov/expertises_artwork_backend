@@ -80,7 +80,7 @@ header {
 }
 
 /* Общий контейнер для заявок с плавным переходом */
-.expertise_list {
+.order_list {
     position: absolute;
     right: 20px;
     top: 50%;
@@ -91,12 +91,12 @@ header {
 }
 
 /* Изображение списка экспертизы */
-.expertise_list img {
+.order_list img {
     height: 50px;
 }
 
 /* Счетчик товаров */
-.expertise_count {
+.order_count {
     position: absolute;
     top: 1px;
     right: 1px;
@@ -112,11 +112,11 @@ header {
     transition: background-color 0.3s ease; 
 }
 
-.expertise_list:hover {
+.order_list:hover {
     transform: scale(1); 
 }
 
-.expertise_list:hover .expertise_count {
+.order_list:hover .order_count {
     background-color:  #a9be71; 
 }
 
@@ -222,6 +222,7 @@ header {
     justify-content: space-between;
     align-items: center;
     width: 100%; 
+    flex-wrap: wrap;
 }
 
 .item-details h5 {
@@ -236,13 +237,14 @@ header {
     font-size: 18px;
     text-decoration: none;
     position: relative;
-    left: -450px; /* Сдвиг влево на 10px */
+    left: -50px; /* Сдвиг влево на 10px */
 }
 
 
 .item-more:hover {
     text-decoration: underline;
 }
+
 
 .qty-btn {
     background-color: #E4EAEC;
@@ -310,8 +312,11 @@ header {
     margin-top: 20px;
 }
 
-.painting-info .price-info {
-    font-size: 24px; 
-    font-weight: bold;
-    margin-top: 20px;
+textarea {
+    resize: none; /* Запрет на изменение размера текстового поля */
+    width: 250px; /* Увеличение ширины текстового поля */
+    margin-right: 10px; /* Отступ справа от текстового поля */
+}
+.spacing {
+    margin: 20px 0; /* Измените значение по необходимости */
 }
