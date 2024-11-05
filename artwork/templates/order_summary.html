@@ -1,33 +1,33 @@
 {% extends 'base.html' %}
 
-{% block title %}Все заявки{% endblock %}
+{% block title %}Заявка на экспертизу{% endblock %}
 
 {% block content_body %}
 <div class="order-container">
-    <h1 class="order-title">Все заявки на экспертизу</h1>
+    <h1 class="order-title">Заявка на экспертизу</h1>
 
     <div class="order-section">
-        <h2>{{ data.order_name }}</h2>
+        
 
-        <!-- Поле для поиска по названию картины -->
         <form method="get" action="{% url 'view_order' data.order_id %}">
-            <div class="search-container" style="margin-bottom: 20px;"> <!-- Добавляем отступ здесь -->
-                <label for="painting_title">Введите название картины</label>
-                <input type="text" id="painting_title" name="painting_title" required placeholder="Поиск" value="{{ data.search_query }}">
+            <div class="search-container" style="margin-bottom: 20px;">
+                <label for="author">Введите автора картины</label>
+                <input type="text" id="author" name="author" required placeholder="Поиск" value="{{ data.search_query }}">
+                <button type="submit">Поиск</button>
             </div>
         </form>
 
-        <!-- Список картин в заказе -->
         <div class="order-items">
             {% for item in data.items %}
             <div class="order-item">
                 <div class="item-image">
-                    <img src="{{ item.painting.img_path }}" alt="{{ item.painting.title }}" class="painting-img"> 
+                    <img src="{{ item.painting.img_path }}" alt="{{ item.painting.title }}" class="painting-img">
                 </div>
                 
                 <div class="item-details">
                     <h5>{{ item.painting.title }}</h5>
-                    <a href="{% if item.painting.id %}{% url 'painting_detail' item.painting.id %}{% else %}#{% endif %}" class="item-more">Подробнее</a>
+                    <p>Автор: {{ item.painting.author }}</p>
+                    <a href="{% url 'painting_detail' item.painting.id %}" class="item-more">Подробнее</a>
 
                     <textarea id="comment_{{ item.id }}" name="comment_{{ item.id }}" rows="3" placeholder="Введите комментарий">{{ item.comment }}</textarea>
                 </div>
@@ -38,17 +38,16 @@
                         <button type="submit" class="btn btn-danger">Удалить картину из заявки</button>
                     </form>
                 </div>
-                    
             </div>
             {% endfor %}
         </div>
 
-        <!-- Удаление всей заявки -->
+        
+
         <form method="post" action="{% url 'delete_order' data.order_id %}">
             {% csrf_token %}
-            <button class="btn btn-danger">Удалить заявку</button>
+            <button type="submit" class="btn btn-danger">Удалить заявку</button>
         </form>
     </div>
 </div>
 {% endblock %}
-
