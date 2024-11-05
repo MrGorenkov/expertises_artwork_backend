@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-*ws#8l6ky5pz)@q-tb_f=y71%ei&dsg(6oa2mjp+-o924&8(4i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,13 +37,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    'rest_framework',
     'artwork',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -131,14 +133,41 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 MEDIA_URL = '/media/'
 
 # Minio settings
-AWS_ACCESS_KEY_ID = 'Minio.124'
-AWS_SECRET_ACCESS_KEY = 'Minio.124'
-AWS_STORAGE_BUCKET_NAME = 'web-img'
-AWS_S3_ENDPOINT_URL = 'http://localhost:9001'  # Замените на URL Minio-сервера
+MINIO_ENDPOINT = 'localhost:9000'
+MINIO_ACCESS_KEY = 'Minio.124'
+MINIO_SECRET_KEY = 'Minio.124'
+MINIO_BUCKET_NAME = 'web-img'
+MINIO_USE_SSL = False
 
-AWS_S3_USE_SSL = False  # Установите False, если Minio работает по HTTP
+# AWS S3 settings (used for Minio)
+AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = f'http://{MINIO_ENDPOINT}'
+AWS_S3_USE_SSL = MINIO_USE_SSL
+
+# Additional AWS S3 settings for Minio compatibility
+AWS_AUTO_CREATE_BUCKET = True
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Предполагаемый URL фронтенда
+    "http://localhost:9000",  # URL Minio
+    "http://localhost:9001",  # Альтернативный URL Minio
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
