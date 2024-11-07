@@ -6,18 +6,18 @@
 {% block content_head %}
 <div class="container">
     <form method="get">
-        <div class="search_bar">
-            <input type="text" name="painting_title" placeholder="Поиск по названию" value="{{ search_query }}">
-            <button type="submit" id="search">
-                <img src="{% static 'img/search.png' %}" alt="Иконка поиска">
+        <div class="painting_request_bar">
+            <input type="text" name="painting_title" placeholder="Поиск по названию" value="{{ painting_request_query }}">
+            <button type="submit" id="painting_request">
+                <img src="{% static 'img/painting_request.png' %}" alt="Иконка поиска">
             </button>
         </div>
     </form>
-    <div class="order_list {% if data.order_count == 0 %}inactive{% endif %}">
-        {% if data.order_count > 0 %}
-            <a href="{% url 'view_order' data.order_id %}">
+    <div class="expertise_list {% if data.expertise_count == 0 %}inactive{% endif %}">
+        {% if data.expertise_count > 0 %}
+            <a href="{% url 'view_expertise' data.expertise_id %}">
                 <img src="{% static 'img/cart.png' %}" alt="Корзина">
-                <span class="order_count">{{ data.order_count }}</span>
+                <span class="expertise_count">{{ data.expertise_count }}</span>
             </a>
         {% else %}
             <span><img src="{% static 'img/cart.png' %}" alt="Корзина"></span>
@@ -37,9 +37,9 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ painting.title }}</h5>
                     <p class="card-description">{{ painting.short_description }}</p>
-                    <form method="post" action="{% url 'add_to_order' %}">
+                    <form method="post" action="{% url 'add_to_expertise' %}">
                         {% csrf_token %}
-                        <button class="btn-add" name="add_to_order" value="{{ painting.id }}">Добавить</button>
+                        <button class="btn-add" name="add_to_expertise" value="{{ painting.id }}">Добавить</button>
                     </form>
                 </div>
             </div>

@@ -3,23 +3,23 @@
 {% block title %}Заявка на экспертизу{% endblock %}
 
 {% block content_body %}
-<div class="order-container">
-    <h1 class="order-title">Заявка на экспертизу</h1>
+<div class="expertise-container">
+    <h1 class="expertise-title">Заявка на экспертизу</h1>
 
-    <div class="order-section">
+    <div class="expertise-section">
         
 
-        <form method="get" action="{% url 'view_order' data.order_id %}">
-            <div class="search-container" style="margin-bottom: 20px;">
+        <form method="get" action="{% url 'view_expertise' data.expertise_id %}">
+            <div class="painting_request-container" style="margin-bottom: 20px;">
                 <label for="author">Выберите мастера</label>
-                <input type="text" id="author" name="author" required placeholder="Выбор" value="{{ data.search_query }}">
+                <input type="text" id="author" name="author" required placeholder="Выбор" value="{{ data.painting_request_query }}">
                 
             </div>
         </form>
 
-        <div class="order-items">
+        <div class="expertise-items">
             {% for item in data.items %}
-            <div class="order-item">
+            <div class="expertise-item">
                 <div class="item-image">
                     <img src="{{ item.painting.img_path }}" alt="{{ item.painting.title }}" class="painting-img">
                 </div>
@@ -32,8 +32,8 @@
                     <textarea id="comment_{{ item.id }}" name="comment_{{ item.id }}" rows="3" placeholder="Введите комментарий">{{ item.comment }}</textarea>
                 </div>
 
-                <div class="order-actions">
-                    <form method="post" action="{% url 'delete_order_item' data.order_id item.id %}">
+                <div class="expertise-actions">
+                    <form method="post" action="{% url 'delete_expertise_item' data.expertise_id item.id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">Удалить картину из заявки</button>
                     </form>
@@ -44,7 +44,7 @@
 
         
 
-        <form method="post" action="{% url 'delete_order' data.order_id %}">
+        <form method="post" action="{% url 'delete_expertise' data.expertise_id %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger">Удалить заявку</button>
         </form>

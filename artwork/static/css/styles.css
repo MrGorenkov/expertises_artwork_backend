@@ -54,14 +54,14 @@ header {
     padding: 0 25px;
 }
 
-.search_bar {
+.painting_request_bar {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 300px;              
 }
 
-.search_bar input[type="text"] {
+.painting_request_bar input[type="text"] {
     padding: 15px;
     border-radius: 10px;
     border: 3px solid #F4F4F4;
@@ -69,18 +69,18 @@ header {
     font-size: 16px;
 }
 
-.search_bar button {
+.painting_request_bar button {
     background-color: white;
     border: none;
     cursor: pointer;
     margin-right: 15px;
 }
-.search_bar button:hover {
+.painting_request_bar button:hover {
     opacity: 0.8;
 }
 
 /* Общий контейнер для заявок с плавным переходом */
-.order_list {
+.expertise_list {
     position: absolute;
     right: 20px;
     top: 50%;
@@ -91,12 +91,12 @@ header {
 }
 
 /* Изображение списка экспертизы */
-.order_list img {
+.expertise_list img {
     height: 50px;
 }
 
 /* Счетчик товаров */
-.order_count {
+.expertise_count {
     position: absolute;
     top: 1px;
     right: 1px;
@@ -112,11 +112,11 @@ header {
     transition: background-color 0.3s ease; 
 }
 
-.order_list:hover {
+.expertise_list:hover {
     transform: scale(1); 
 }
 
-.order_list:hover .order_count {
+.expertise_list:hover .expertise_count {
     background-color:  #a9be71; 
 }
 
@@ -175,12 +175,12 @@ header {
 
 
 /* Контейнер для заявок */
-.order-container {
+.expertise-container {
     margin-top: 100px;
     padding: 20px;
 }
 
-.order-title {
+.expertise-title {
     color: #A26907;
     font-size: 28px;
     margin-bottom: 20px;
@@ -188,17 +188,17 @@ header {
     margin-top: -20px; 
 }
 
-.order-details h3 {
+.expertise-details h3 {
     font-size: 18px;
     color: #333;
 }
 
-.order-items {
+.expertise-items {
     display: flex;
     flex-direction: column;
 }
 
-.order-item {
+.expertise-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
