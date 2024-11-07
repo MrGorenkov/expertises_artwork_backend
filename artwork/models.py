@@ -7,7 +7,7 @@ class Painting(models.Model):
     img_path = models.CharField(max_length=255, verbose_name="Путь изображения")
     short_description = models.CharField(max_length=255, verbose_name="Краткое описание")
     description = models.TextField(verbose_name="Полное описание")
-    author = models.CharField(max_length=200, verbose_name="Автор")
+    author = models.CharField(max_length=200, blank=True, verbose_name="Автор")
     
     def __str__(self):
         return self.title
@@ -26,14 +26,15 @@ class Expertise(models.Model):
         (5, 'Отклонено'),
     )
 
+    
+
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING, verbose_name="Пользователь", related_name="created_orders")
     status = models.IntegerField(choices=STATUS_CHOICES, default=1, verbose_name="Статус")
     date_created = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     manager = models.ForeignKey(User, on_delete=models.DO_NOTHING, verbose_name="Менеджер", related_name="managed_orders", blank=True, null=True)
     date_formation = models.DateTimeField(blank=True, null=True, verbose_name="Дата формирования")
     date_completion = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершения")
-    name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Название заявки")
-
+    
     def __str__(self):
         return f"Заказ №{self.pk} от {self.user.username}"
     
@@ -47,7 +48,8 @@ class Expertise(models.Model):
         db_table = 'expertise'
 
 class OrderItem(models.Model):
-    expertise = models.ForeignKey(Expertise, on_delete=models.CASCADE, related_name="items", verbose_name="Заказ")
+    expertise = models.ForeignKey(Expertise, on_delete=models.SET_NULL, null=True, related_name="items", verbose_name="Заказ")
+    author = models.CharField(max_length=200, blank=True, verbose_name="Автор")
     painting = models.ForeignKey(Painting, on_delete=models.DO_NOTHING, verbose_name="Картина")
     comment = models.TextField(default="", blank=True, verbose_name="Комментарий")
 

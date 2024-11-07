@@ -5,13 +5,12 @@ from django.db.models import Q
 
 def paintings_list(request):
     """Отображение списка картин."""
-    search_query = request.GET.get('author', '').lower()
-    
+    search_query = request.GET.get('painting_title', '').lower()
     draft_order = Expertise.objects.filter(user=request.user, status=1).first() if request.user.is_authenticated else None
 
     return render(request, 'paintings_list.html', {
         'data': {
-            'paintings': Painting.objects.filter(author__icontains=search_query),
+            'paintings': Painting.objects.filter(title__icontains=search_query),
             'search_query': search_query,
             'order_count': draft_order.items.count() if draft_order else 0,
             'order_id': draft_order.id if draft_order else None
@@ -43,7 +42,7 @@ def view_order(request, order_id):
     return render(request, 'order_summary.html', {
         'data': {
             'order_id': order.id,
-            'order_name': order.name,
+            
             'items': order_items,
             'search_query': search_query,
         }
@@ -74,7 +73,7 @@ def get_or_create_order(user):
     return draft_order, created
 
 def delete_order_item(request, order_id, item_id):
-    """View to delete an item from the order."""
+   
     if request.method == "POST":
         order_item = get_object_or_404(OrderItem, id=item_id, expertise__id=order_id)
         order_item.delete()
@@ -82,14 +81,3 @@ def delete_order_item(request, order_id, item_id):
 
     return redirect('paintings_list')
 
-def form_order(request, order_id):
-    """Формирование заказа"""
-    if request.method == "POST" and request.user.is_authenticated:
-        order = get_object_or_404(Expertise, id=order_id, user=request.user, status=1)
-        order_name = request.POST.get("order_name")
-        if order_name:
-            order.name = order_name
-            order.status = 2  # Сформировано
-            order.save()
-            return redirect('view_order', order_id=order.id)
-    return redirect('paintings_list')

@@ -11,9 +11,9 @@
 
         <form method="get" action="{% url 'view_order' data.order_id %}">
             <div class="search-container" style="margin-bottom: 20px;">
-                <label for="author">Введите автора картины</label>
-                <input type="text" id="author" name="author" required placeholder="Поиск" value="{{ data.search_query }}">
-                <button type="submit">Поиск</button>
+                <label for="author">Выберите мастера</label>
+                <input type="text" id="author" name="author" required placeholder="Выбор" value="{{ data.search_query }}">
+                
             </div>
         </form>
 
