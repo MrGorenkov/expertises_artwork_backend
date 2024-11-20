@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
+from django.db import connection
 from .models import Expertise, ExpertiseItem, Painting
 from django.contrib.auth.models import User
 
@@ -65,10 +65,9 @@ def add_to_expertise(request):
 
 def delete_expertise(request, expertise_id):
     """Удаление заказа"""
-    if request.method == "POST":
-        expertise = get_object_or_404(Expertise, id=expertise_id, user=FIXED_USER)
-        expertise.status = 3  # Удалено
-        expertise.save()
+    sql = "UPDATE expertise SET status = 3 WHERE id =%s"
+    with connection.cursor() as cursor:
+        cursor.execute(sql, (expertise_id,))
     return redirect('paintings_list')
 
 def get_or_create_expertise(user):
