@@ -27,12 +27,3 @@ def process_file_upload(file, object_name):
         return url
     except S3Error as e:
         return {'error': str(e)}
-
-def delete_file(file_path):
-    try:
-        bucket_name = settings.MINIO_BUCKET_NAME
-        object_name = file_path.split('/')[-1]
-        client.remove_object(bucket_name, object_name)
-        return {'message': 'File deleted successfully'}
-    except S3Error as e:
-        return {'error': str(e)}

@@ -165,9 +165,17 @@ CORS_ALLOWED_ORIGINS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 }
+# В конце файла settings.py добавьте:
+from django.contrib.auth import get_user_model
+def get_or_create_fixed_user():
+    User = get_user_model()
+    return User.objects.get_or_create(username='fixed_user')[0]
+
+# At the end of settings.py
+FIXED_USERNAME = 'fixed_user'

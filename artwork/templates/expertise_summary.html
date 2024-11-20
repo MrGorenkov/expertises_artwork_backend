@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Заявка на экспертизу{% endblock %}
+
+{% block content_body %}
+<div class="expertise-container">
+    <h1 class="expertise-title">Заявка на экспертизу</h1>
+    <p>Автор: Горенков А.А.</p>
+
+    <div class="expertise-section">
+        <div class="expertise-items">
+            {% for item in data.items %}
+            <div class="expertise-item">
+                <div class="item-image">
+                    <img src="{{ item.painting.img_path }}" alt="{{ item.painting.title }}" class="painting-img">
+                </div>
+                
+                <div class="item-details">
+                    <h5>{{ item.painting.title }}</h5>
+                    <a href="{% url 'painting_detail' item.painting.id %}" class="item-more">Подробнее</a>
+                    <textarea id="comment_{{ item.id }}" name="comment_{{ item.id }}" rows="3" class="comment-field" placeholder="Введите комментарий">{{ item.comment }}</textarea>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if data.status == 'Черновик' %}
+        <form method="post" action="{% url 'view_expertise' data.expertise_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_expertise">
+            <button type="submit" class="btn-delete">Удалить заявку</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
