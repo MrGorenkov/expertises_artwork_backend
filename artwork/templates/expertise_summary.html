@@ -1,22 +1,12 @@
 {% extends 'base.html' %}
-
 {% block title %}Заявка на экспертизу{% endblock %}
 
 {% block content_body %}
 <div class="expertise-container">
     <h1 class="expertise-title">Заявка на экспертизу</h1>
+    <p>Автор: Горенков А.А.</p>
 
     <div class="expertise-section">
-        
-
-        <form method="get" action="{% url 'view_expertise' data.expertise_id %}">
-            <div class="painting_request-container" style="margin-bottom: 20px;">
-                <label for="author">Выберите мастера</label>
-                <input type="text" id="author" name="author" required placeholder="Выбор" value="{{ data.painting_request_query }}">
-                
-            </div>
-        </form>
-
         <div class="expertise-items">
             {% for item in data.items %}
             <div class="expertise-item">
@@ -26,28 +16,20 @@
                 
                 <div class="item-details">
                     <h5>{{ item.painting.title }}</h5>
-                    <p>Автор: {{ item.painting.author }}</p>
                     <a href="{% url 'painting_detail' item.painting.id %}" class="item-more">Подробнее</a>
-
-                    <textarea id="comment_{{ item.id }}" name="comment_{{ item.id }}" rows="3" placeholder="Введите комментарий">{{ item.comment }}</textarea>
-                </div>
-
-                <div class="expertise-actions">
-                    <form method="post" action="{% url 'delete_expertise_item' data.expertise_id item.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Удалить картину из заявки</button>
-                    </form>
+                    <textarea id="comment_{{ item.id }}" name="comment_{{ item.id }}" rows="3" class="comment-field" placeholder="Введите комментарий">{{ item.comment }}</textarea>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        
-
-        <form method="post" action="{% url 'delete_expertise' data.expertise_id %}">
+        {% if data.status == 'Черновик' %}
+        <form method="post" action="{% url 'view_expertise' data.expertise_id %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Удалить заявку</button>
+            <input type="hidden" name="action" value="delete_expertise">
+            <button type="submit" class="btn-delete">Удалить заявку</button>
         </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

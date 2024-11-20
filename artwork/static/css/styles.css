@@ -218,6 +218,7 @@ header {
 }
 
 .item-details {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -236,14 +237,24 @@ header {
     color: #A66F2B;
     font-size: 18px;
     text-decoration: none;
-    position: relative;
-    left: -50px; /* Сдвиг влево на 10px */
+    position: absolute; /* Позиционируем кнопку относительно родителя */
+    bottom: 30px; /* Расстояние от нижней части контейнера */
+    right: 700px; /* Прикрепляем к левому краю контейнера */
+    padding: 10px 20px;
+    background-color: #fff;
+    border: 1px solid #A66F2B;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
-
 
 .item-more:hover {
     text-decoration: underline;
+    background-color: #A66F2B;
+    color: white;
 }
+
 
 
 .qty-btn {
@@ -319,4 +330,57 @@ textarea {
 }
 .spacing {
     margin: 20px 0; /* Измените значение по необходимости */
+}
+.btn-add {
+    background-color: #F1F5F9; /* Спокойный фон */
+    color: #4a4a4a; /* Тёмный текст */
+    border: 1px solid #d4d8dc; /* Легкая рамка */
+    border-radius: 6px; /* Мягкие углы */
+    padding: 10px 16px; /* Оптимальный размер */
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Ховер эффект для кнопки */
+.btn-add:hover {
+    background-color: #F1F5F9; /* Немного темнее */
+    border-color: #F1F5F9; /* Более четкая рамка */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Легкая тень */
+}
+
+/* Активное состояние */
+.btn-add:active {
+    background-color: #F1F5F9; /* Ещё темнее */
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Вдавливание */
+}
+.btn-delete {
+    background-color: #f8e0e0; /* Светло-розовый */
+    color: #b64646; /* Темно-красный текст */
+    border: 1px solid #e4c4c4;
+}
+
+.btn-delete:hover {
+    background-color: #f5d3d3; /* Легкое затемнение */
+    border-color: #d9a8a8;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Поле комментария */
+.comment-field {
+    width: 100%; /* Растягиваем на всю ширину родителя */
+    max-width: 400px; /* Ограничение по ширине */
+    height: 80px; /* Уменьшенная высота */
+    border: 1px solid #d4d8dc; /* Легкая рамка */
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 14px;
+    background-color: #eef1f5; /* Нежный фон */
+    transition: border-color 0.3s ease;
+}
+
+.comment-field:focus {
+    border-color: #a2a8af; /* Легкий акцент при фокусе */
+    outline: none;
 }

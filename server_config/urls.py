@@ -9,6 +9,6 @@ urlpatterns = [
     path('expertise/<int:expertise_id>/', views.view_expertise, name='view_expertise'),
     path('add_to_expertise/', views.add_to_expertise, name='add_to_expertise'),
     path('delete_expertise/<int:expertise_id>/', views.delete_expertise, name='delete_expertise'),
-    path('delete_expertise_item/<int:expertise_id>/<int:item_id>/', views.delete_expertise_item, name='delete_expertise_item'),
+    
     
 ]

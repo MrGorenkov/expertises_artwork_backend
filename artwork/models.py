@@ -35,9 +35,18 @@ class Expertise(models.Model):
     date_formation = models.DateTimeField(blank=True, null=True, verbose_name="Дата формирования")
     date_completion = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершения")
     author = models.CharField(max_length=200, blank=True, verbose_name="Автор")
+    
     def __str__(self):
         return f"Заказ №{self.pk} от {self.user.username}"
     
+    def save(self, *args, **kwargs):
+        
+        if self.status == 4: 
+            for item in self.items.all():
+                item.result = True  
+                item.save()
+        super().save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         self.items.all().delete()
         super().delete(*args, **kwargs)
@@ -49,9 +58,9 @@ class Expertise(models.Model):
 
 class ExpertiseItem(models.Model):
     expertise = models.ForeignKey(Expertise, on_delete=models.SET_NULL, null=True, related_name="items", verbose_name="Заказ")
-    
+    result = models.BooleanField(default=False, verbose_name="Результат проверки")
     painting = models.ForeignKey(Painting, on_delete=models.DO_NOTHING, verbose_name="Картина")
-    comment = models.TextField(default="", blank=True, verbose_name="Комментарий")
+    comment = models.TextField(default="", blank=True, verbose_name="Комментарий") 
 
     def __str__(self):
         return f"{self.painting.title} в заказе №{self.expertise.pk if self.expertise else 'удален'}"
