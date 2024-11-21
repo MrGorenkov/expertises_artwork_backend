@@ -1,29 +1,64 @@
 from django.conf import settings
 from minio import Minio
-from minio.error import S3Error
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from rest_framework.response import Response
+from .models import Painting
 
-client = Minio(
-    endpoint=settings.MINIO_ENDPOINT,
-    access_key=settings.MINIO_ACCESS_KEY,
-    secret_key=settings.MINIO_SECRET_KEY,
-    secure=settings.MINIO_USE_SSL
-)
+# Функция загрузки файла в MinIO
 
-def process_file_upload(file, object_name):
+
+def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
-        bucket_name = settings.MINIO_BUCKET_NAME
-        if not client.bucket_exists(bucket_name):
-            client.make_bucket(bucket_name)
+        client.put_object('web-img', image_name, file_object, file_object.size)
+        return f"http://localhost:9000/web-img/{image_name}"
+    except Exception as e:
+        return {"error": str(e)}
 
-        client.put_object(
-            bucket_name,
-            object_name,
-            file,
-            length=-1,
-            part_size=10*1024*1024
-        )
+# Функция добавления изображения химического элемента
 
-        url = client.presigned_get_object(bucket_name, object_name)
-        return url
-    except S3Error as e:
-        return {'error': str(e)}
+
+def add_pic(new_painting, pic):
+    client = Minio(
+        endpoint=settings.AWS_S3_ENDPOINT_URL,
+        access_key=settings.AWS_ACCESS_KEY_ID,
+        secret_key=settings.AWS_SECRET_ACCESS_KEY,
+        secure=settings.MINIO_USE_SSL
+    )
+
+    # Используем ID химического элемента для наименования изображения
+    img_obj_name = f"{new_painting.id}.png"
+
+    if not pic:
+        return Response({"error": "Нет файла для изображения."})
+
+    # Загружаем изображение
+    result = process_file_upload(pic, client, img_obj_name)
+
+    if 'error' in result:
+        return Response(result)
+
+    # Сохраняем URL изображения в поле img_path
+    new_painting.img_path = result
+    new_painting.save()
+
+    return Response({"message": "Файл успешно добавлен."})
+
+# Функция удаления изображения химического элемента
+
+
+def delete_pic(image_path):
+    client = Minio(
+        endpoint=settings.AWS_S3_ENDPOINT_URL,
+        access_key=settings.AWS_ACCESS_KEY_ID,
+        secret_key=settings.AWS_SECRET_ACCESS_KEY,
+        secure=settings.MINIO_USE_SSL
+    )
+
+    # Получаем название изображения из пути
+    img_obj_name = image_path.split("/")[-1]
+
+    try:
+        client.remove_object('web-img', img_obj_name)
+        return {"message": "Файл успешно удален."}
+    except Exception as e:
+        return {"error": str(e)}

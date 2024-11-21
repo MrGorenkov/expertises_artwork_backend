@@ -1,175 +1,142 @@
-from django.contrib.auth import get_user_model
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.utils import timezone
-from django.conf import settings
 from django.shortcuts import get_object_or_404
-from .models import Painting, Expertise, ExpertiseItem
-from .minio import process_file_upload
-from minio.error import S3Error
-from django.utils.timezone import now
+from datetime import datetime
+from django.contrib.auth.models import User
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.response import Response
+from rest_framework import status
+from artwork.models import Painting, Expertise, ExpertiseItem
 from django.db.models import Q
-from .serializers import ExpertiseSerializer, ExpertiseItemSerializer, PaintingSerializer
+from artwork.serializers import *
+from .minio import add_pic, delete_pic
 
-User = get_user_model()
+
+SINGLETON_USER = User(id=1, username="admin")
+SINGLETON_MANAGER = User(id=2, username="manager")
 
 
-from django.db.models import Count
+@api_view(['GET'])
+def get_paintings_list(request):
+    """
+    Получение всех химических элементов
+    """
+    title_query = request.GET.get('painting_title', '').lower()
 
-class PaintingViewSet(viewsets.ModelViewSet):
-    queryset = Painting.objects.all()
+    draft_expertise = Expertise.objects.filter(
+        user_id=SINGLETON_USER.id, status=Expertise.STATUS_CHOICES[0][0]).first()
+
+    filter_paintings = Painting.objects.filter(
+        title__istartswith=title_query)
+
+    serializer = PaintingSerializer(filter_paintings, many=True)
+
+    expertise_count = draft_expertise.items.count() if draft_expertise else 0
+
+    return Response(
+        {
+            'paintings': serializer.data,
+            'expertise_count': expertise_count,
+            'expertise_id': draft_expertise.id if draft_expertise else None
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+class PaintingView(APIView):
+    """
+    Класс CRUD операций над химическим элементом
+    """
+    model_class = Painting
     serializer_class = PaintingSerializer
 
-    def get_fixed_user(self):
-        # Получение пользователя для черновиков
-        return User.objects.get_or_create(username=settings.FIXED_USERNAME)[0]
-
-    def list(self, request):
-        """
-        Возвращает список картин с фильтрацией по названию.
-        Дополнительно: ID заявки-черновика и количество картин в черновике.
-        """
-        # Фильтрация по названию
-        queryset = self.queryset
-        title_query = request.query_params.get('title', None)
-        if title_query:
-            queryset = queryset.filter(title__icontains=title_query)
-
-        # Сериализация данных картин
-        serializer = self.serializer_class(queryset, many=True)
-
-        # Получение черновика для фиксированного пользователя
-        fixed_user = self.get_fixed_user()
-        draft_expertise = Expertise.objects.filter(user=fixed_user, status=1).annotate(
-            item_count=Count('items')
-        ).first()
-
-        # Подготовка данных для ответа
-        data = {
-            'paintings': serializer.data,
-            'expertise_id': draft_expertise.id if draft_expertise else None,
-            'expertise_count': draft_expertise.item_count if draft_expertise else 0
-        }
-        return Response(data, status=status.HTTP_200_OK)
-
-
-    @action(detail=True, methods=['post'])
-    def add_to_draft(self, request, pk=None):
-        painting = self.get_object()
-        fixed_user = self.get_fixed_user()
-        draft_expertise, created = Expertise.objects.get_or_create(
-            user=fixed_user,
-            status=1,
-            defaults={'date_created': timezone.now()}
-        )
-        ExpertiseItem.objects.get_or_create(expertise=draft_expertise, painting=painting)
-        return Response({'status': 'Painting added to draft expertise'})
-
-    @action(detail=True, methods=['post'])
-    def add_image(self, request, pk=None):
-        painting = self.get_object()
-        if 'image' not in request.FILES:
-            return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
-
-        image_file = request.FILES['image']
-        object_name = f"painting_{painting.id}_{image_file.name}"
-        url = process_file_upload(image_file, object_name)
-
-        if isinstance(url, dict) and 'error' in url:
-            return Response({'error': url['error']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        painting.img_path = url
-        painting.save()
-
-        return Response({'status': 'Image added', 'url': url})
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.img_path:
-            bucket_name = settings.MINIO_BUCKET_NAME
-            object_name = instance.img_path.split('/')[-1]
-            try:
-                client.remove_object(bucket_name, object_name)
-            except S3Error as e:
-                return Response({'error': f"Failed to delete image: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        self.perform_destroy(instance)
-        return Response({'status': 'Painting deleted'})
-
-class ExpertiseViewSet(viewsets.ModelViewSet):
-    queryset = Expertise.objects.exclude(status=3)  # Исключить удаленные
-    serializer_class = ExpertiseSerializer
-
-    def list(self, request):
-        status_filter = request.query_params.get('status', None)
-        date_start = request.query_params.get('date_start', None)
-        date_end = request.query_params.get('date_end', None)
-
-        queryset = self.queryset.filter(~Q(status=1))  # Исключить черновики
-
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        if date_start and date_end:
-            queryset = queryset.filter(date_formation__range=[date_start, date_end])
-
-        serializer = self.serializer_class(queryset, many=True)
+    # Возвращает данные о картине
+    def get(self, request, pk, format=None):
+        painting_data = get_object_or_404(self.model_class, pk=pk)
+        serializer = self.serializer_class(painting_data)
         return Response(serializer.data)
 
-    def retrieve(self, request, pk=None):
-        expertise = self.get_object()
-        serializer = self.serializer_class(expertise)
-        return Response(serializer.data)
+    # Добавляет новую картину
+    def post(self, request, format=None):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk=None):
-        expertise = self.get_object()
-        serializer = self.serializer_class(expertise, data=request.data, partial=True)
+    # Изменение информации об элементе
+    def put(self, request, pk, format=None):
+        painting = self.model_class.objects.filter(pk=pk).first()
+        if painting is None:
+            return Response("Картина не найдена", status=status.HTTP_404_NOT_FOUND)
+        serializer = self.serializer_class(
+            painting, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['put'])
-    def submit(self, request, pk=None):
-        expertise = self.get_object()
-        if expertise.status != 1:
-            return Response({'error': 'Only drafts can be submitted'}, status=status.HTTP_400_BAD_REQUEST)
+    # Удаление элемента вместе с изображением
+    def delete(self, request, pk, format=None):
+        painting = get_object_or_404(self.model_class, pk=pk)
+        if painting.img_path:
+            deletion_result = delete_pic(painting.img_path)
+            if 'error' in deletion_result:
+                return Response(deletion_result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        painting.delete()
+        return Response({"message": "Картина и его изображение успешно удалены."}, status=status.HTTP_204_NO_CONTENT)
 
-        required_fields = ['author', 'date_formation']
-        missing_fields = [field for field in required_fields if not getattr(expertise, field)]
-        if missing_fields:
-            return Response({'error': f'Missing fields: {", ".join(missing_fields)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        expertise.status = 2
-        expertise.date_formation = now()
-        expertise.save()
-        return Response({'status': 'Submitted successfully'})
+@api_view(['POST'])
+def update_painting_image(request, pk):
+    """
+    Добавление или замена изображения для картины по его ID.
+    """
+    painting = get_object_or_404(Painting, pk=pk)
 
-    @action(detail=True, methods=['put'])
-    def complete(self, request, pk=None):
-        expertise = self.get_object()
-        if expertise.status != 2:
-            return Response({'error': 'Only submitted expertises can be completed'}, status=status.HTTP_400_BAD_REQUEST)
+    image = request.FILES.get('image')
+    if not image:
+        return Response({"error": "Файл изображения не предоставлен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        expertise.status = 4
-        expertise.date_completion = now()
-        expertise.save()
-        return Response({'status': 'Completed successfully'})
+    if painting.img_path:
+        delete_pic(painting.img_path)
 
-    @action(detail=True, methods=['put'])
-    def reject(self, request, pk=None):
-        expertise = self.get_object()
-        if expertise.status != 2:
-            return Response({'error': 'Only submitted expertises can be rejected'}, status=status.HTTP_400_BAD_REQUEST)
+    result = add_pic(painting, image)
 
-        expertise.status = 5
-        expertise.date_completion = now()
-        expertise.save()
-        return Response({'status': 'Rejected successfully'})
+    if 'error' in result.data:
+        return result
 
-    def destroy(self, request, pk=None):
-        expertise = self.get_object()
-        if expertise.status == 1:  # Only drafts can be deleted
-            expertise.delete()
-            return Response({'status': 'Deleted successfully'})
-        return Response({'error': 'Only drafts can be deleted'}, status=status.HTTP_400_BAD_REQUEST)
+    painting.img_path = f"http://localhost:9000/web-img/{painting.id}.png"
+    painting.save()
+
+    return Response({"message": "Изображение успешно добавлено/заменено."}, status=status.HTTP_200_OK)
+@api_view(['POST'])
+def post_painting_to_expertise(request, pk):
+    """
+    Добавление картины в заявку нп экспертизу
+    """
+    painting = Painting.objects.filter(pk=pk).first()
+    if painting is None:
+        return Response("Картина не найдена", status=status.HTTP_404_NOT_FOUND)
+    expertise_id = get_or_create_expertise(SINGLETON_USER.id)
+    data = ExpertiseItem(expertise_id=expertise_id, painting_id=pk)
+    data.save()
+    return Response(status=status.HTTP_200_OK)
+
+
+def get_or_create_expertise(user_id):
+   
+    old_expertise = Expertise.objects.filter(
+        user_id=user_id, status=Expertise.STATUS_CHOICES[0][0]).first()
+
+    if old_expertise is not None:
+        return old_expertise.id
+
+    new_expertise = Expertise(
+        user_id=user_id, status=Expertise.STATUS_CHOICES[0][0])
+    new_expertise.save()
+    return new_expertise.id
