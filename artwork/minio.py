@@ -14,7 +14,7 @@ def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     except Exception as e:
         return {"error": str(e)}
 
-# Функция добавления изображения химического элемента
+# Функция добавления изображения картины
 
 
 def add_pic(new_painting, pic):
@@ -25,7 +25,7 @@ def add_pic(new_painting, pic):
         secure=settings.MINIO_USE_SSL
     )
 
-    # Используем ID химического элемента для наименования изображения
+    # Используем ID картины для наименования изображения
     img_obj_name = f"{new_painting.id}.png"
 
     if not pic:
@@ -43,7 +43,7 @@ def add_pic(new_painting, pic):
 
     return Response({"message": "Файл успешно добавлен."})
 
-# Функция удаления изображения химического элемента
+# Функция удаления изображения картины
 
 
 def delete_pic(image_path):

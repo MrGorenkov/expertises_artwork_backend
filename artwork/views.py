@@ -22,7 +22,7 @@ SINGLETON_MANAGER = User(id=2, username="manager")
 @api_view(['GET'])
 def get_paintings_list(request):
     """
-    Получение всех химических элементов
+    Получение всех картин
     """
     title_query = request.GET.get('painting_title', '').lower()
 
@@ -48,7 +48,7 @@ def get_paintings_list(request):
 
 class PaintingView(APIView):
     """
-    Класс CRUD операций над химическим элементом
+    Класс CRUD операций над картиной
     """
     model_class = Painting
     serializer_class = PaintingSerializer
@@ -67,7 +67,7 @@ class PaintingView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # Изменение информации об элементе
+    # Изменение информации об картине
     def put(self, request, pk, format=None):
         painting = self.model_class.objects.filter(pk=pk).first()
         if painting is None:
@@ -117,7 +117,7 @@ def update_painting_image(request, pk):
 @api_view(['POST'])
 def post_painting_to_expertise(request, pk):
     """
-    Добавление картины в заявку нп экспертизу
+    Добавление картины в заявку на экспертизу
     """
     painting = Painting.objects.filter(pk=pk).first()
     if painting is None:
