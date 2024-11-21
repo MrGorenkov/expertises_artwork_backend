@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 from artwork.models import Painting, Expertise, ExpertiseItem
 from django.db.models import Q
 from artwork.serializers import *
@@ -140,3 +141,207 @@ def get_or_create_expertise(user_id):
         user_id=user_id, status=Expertise.STATUS_CHOICES[0][0])
     new_expertise.save()
     return new_expertise.id
+
+##################################################################
+
+@api_view(['GET'])
+def get_created_expertise(request):
+    """
+    Получение списка сформированных картин
+    """
+    status_filter = request.query_params.get("status")
+
+    filters = ~Q(status=Expertise.STATUS_CHOICES[2][0])
+    if status_filter is not None:
+        filters &= Q(status=status_filter.upper())
+
+    created_expertise = Expertise.objects.filter(
+        filters).select_related("user")
+    serializer = CreatedExpertiseSerializer(
+        created_expertise, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_painting_expertise(request, pk):
+    """
+    Получение информации о заявке на экспертизу по ее ID
+    """
+    expertise = get_object_or_404(Expertise, pk=pk)
+    
+    # Исключаем удаленные заявки
+    if expertise.status == Expertise.STATUS_CHOICES[2][0]:  # Удалено
+        return Response("Expertise not found", status=status.HTTP_404_NOT_FOUND)
+
+    serializer = FullPaintingExpertiseSerializer(expertise)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['PUT'])
+def put_painting_expertise(request, pk):
+    """
+    Изменение автора экспертизы
+    """
+    try:
+        expertise = Expertise.objects.get(id=pk, status=Expertise.STATUS_CHOICES[0][0])
+    except Expertise.DoesNotExist:
+        return Response("Экспертиза не найдена или не находится в статусе черновика", status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = PutPaintingExpertiseSerializer(expertise, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['PUT'])
+def form_painting_expertise(request, pk):
+    """
+    PUT сформировать создателем (дата формирования). Происходит проверка на обязательные поля
+    """
+    try:
+        expertise = Expertise.objects.get(id=pk, status=Expertise.STATUS_CHOICES[0][0])
+    except Expertise.DoesNotExist:
+        return Response("Экспертиза не найдена или не находится в статусе черновика", status=status.HTTP_404_NOT_FOUND)
+
+    serializer = FormPaintingExpertiseSerializer(expertise, data=request.data, partial=True)
+    if serializer.is_valid():
+        expertise.status = Expertise.STATUS_CHOICES[1][0]  # Предполагаем, что 1 индекс для 'Сформировано'
+        expertise.date_formation = timezone.now()
+        expertise.save()
+        return Response(FormPaintingExpertiseSerializer(expertise).data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def are_valid_comments(expertise_id):
+    expertise = get_object_or_404(Expertise, id=expertise_id)
+    expertise_items = ExpertiseItem.objects.filter(expertise=expertise)
+    
+    for item in expertise_items:
+        if not item.comment:
+            return False
+    return True
+
+
+@api_view(['PUT'])
+def resolve_painting_expertise(request, pk):
+    """
+    Закрытие заявки на косметическое средство модератором
+    """
+    expertise = Expertise.objects.filter(
+        pk=pk, status=2).first()  # 2 - Сформировано
+    if expertise is None:
+        return Response("Косметическое средство не найдено или статус неверный", status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ResolveExpertiseSerializer(
+        expertise, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer.save()
+
+    expertise.date_completion = datetime.now()
+    expertise.manager = SINGLETON_MANAGER
+    expertise.save()
+
+    serializer = CreatedExpertiseSerializer(expertise)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+def delete_painting_expertise(request, pk):
+    """
+    Удаление косметического средства
+    """
+    expertise = Expertise.objects.filter(id=pk,
+                                                  status=1).first()
+    if expertise is None:
+        return Response("CosmeticOrder not found", status=status.HTTP_404_NOT_FOUND)
+
+    expertise.status = 3
+    expertise.save()
+    return Response(status=status.HTTP_200_OK)
+
+
+####################################################
+
+@api_view(['PUT'])
+def put_painting_in_expertise(request, expertise_pk, painting_pk):
+    """
+    Изменение данных о картине в экспертизе
+    """
+    expertise_item = ExpertiseItem.objects.filter(
+        expertise_id=expertise_pk, painting_id=painting_pk).first()
+    if expertise_item is None:
+        return Response("Картина в экспертизе не найдена", status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ExpertiseItemSerializer(
+        expertise_item, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+def delete_painting_in_expertise(request, expertise_pk, painting_pk):
+    """
+    Удаление картины из экспертизы
+    """
+    expertise_item = ExpertiseItem.objects.filter(
+        expertise_id=expertise_pk, painting_id=painting_pk).first()
+    if expertise_item is None:
+        return Response("Картина в экспертизе не найдена", status=status.HTTP_404_NOT_FOUND)
+
+    expertise_item.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+############################
+
+@api_view(['POST'])
+def create_user(request):
+    """
+    Создание пользователя
+    """
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def login_user(request):
+    """
+    Вход
+    """
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({'token': token.key}, status=status.HTTP_200_OK)
+    return Response({'error': 'Invalid Credentials'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def logout_user(request):
+    """
+    Выход
+    """
+    request.auth.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user(request):
+    """
+    Обновление данных пользователя
+    """
+    user = request.user
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
