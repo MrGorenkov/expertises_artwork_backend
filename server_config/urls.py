@@ -29,7 +29,7 @@ path('painting_expertise', views.get_created_expertise,
     path('painting_expertise/<int:pk>/delete', views.delete_painting_expertise,
          name='painting_expertise_delete'),
 
- #################################################
+#################################################
 
     path('painting_in_expertise/<int:expertise_pk>/<int:painting_pk>/put', views.put_painting_in_expertise,
          name='painting_in_expertise_put'),

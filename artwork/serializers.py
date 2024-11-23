@@ -70,7 +70,7 @@ class PaintingSerializer(serializers.ModelSerializer):
         fields = ['pk', 'title', 'img_path', 'short_description', 'description']
 
 
-# Сериализатор для компонента в заявке (OrderComponent)
+
 class ExpertisePaintingSerializer(serializers.ModelSerializer):
     painting = PaintingSerializer()
 
@@ -79,7 +79,6 @@ class ExpertisePaintingSerializer(serializers.ModelSerializer):
         fields = ['title', 'comment']
 
 
-# Полный сериализатор для заявки (CosmeticOrder)
 class FullPaintingExpertiseSerializer(serializers.ModelSerializer):
     items = ExpertiseItemSerializer(many=True, read_only=True)
     user = serializers.CharField(source='user.username')

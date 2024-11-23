@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from datetime import datetime
+from django.http import HttpRequest
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -20,7 +21,6 @@ SINGLETON_USER = User(id=1, username="admin")
 SINGLETON_MANAGER = User(id=2, username="manager")
 
 
-@api_view(['GET'])
 def get_paintings_list(request):
     """
     Получение всех картин
@@ -28,7 +28,7 @@ def get_paintings_list(request):
     title_query = request.GET.get('painting_title', '').lower()
 
     draft_expertise = Expertise.objects.filter(
-        user_id=SINGLETON_USER.id, status=Expertise.STATUS_CHOICES[0][0]).first()
+        user_id=request.user.id, status=Expertise.STATUS_CHOICES[0][0]).first()
 
     filter_paintings = Painting.objects.filter(
         title__istartswith=title_query)
@@ -37,29 +37,23 @@ def get_paintings_list(request):
 
     expertise_count = draft_expertise.items.count() if draft_expertise else 0
 
-    return Response(
-        {
-            'paintings': serializer.data,
-            'expertise_count': expertise_count,
-            'expertise_id': draft_expertise.id if draft_expertise else None
-        },
-        status=status.HTTP_200_OK
-    )
+    return {
+        'paintings': serializer.data,
+    }
 
 
 class PaintingView(APIView):
     """
     Класс CRUD операций над картиной
     """
-    model_class = Painting
-    serializer_class = PaintingSerializer
-
-    # Возвращает данные о картине
-    def get(self, request, pk, format=None):
-        painting_data = get_object_or_404(self.model_class, pk=pk)
-        serializer = self.serializer_class(painting_data)
-        return Response(serializer.data)
-
+    def get(self, request, pk=None, format=None):
+        if pk is not None:
+            painting_data = get_object_or_404(Painting, pk=pk)
+            serializer = PaintingSerializer(painting_data)
+            return Response(serializer.data)
+        else:
+            result = get_paintings_list(request._request)
+            return Response(result, status=status.HTTP_200_OK)
     # Добавляет новую картину
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
@@ -225,12 +219,12 @@ def are_valid_comments(expertise_id):
 @api_view(['PUT'])
 def resolve_painting_expertise(request, pk):
     """
-    Закрытие заявки на косметическое средство модератором
+    Закрытие заявки на экспертизу модератором
     """
     expertise = Expertise.objects.filter(
         pk=pk, status=2).first()  # 2 - Сформировано
     if expertise is None:
-        return Response("Косметическое средство не найдено или статус неверный", status=status.HTTP_404_NOT_FOUND)
+        return Response("Заявка на экспертизу не найдена или статус неверный", status=status.HTTP_404_NOT_FOUND)
 
     serializer = ResolveExpertiseSerializer(
         expertise, data=request.data, partial=True)
@@ -248,13 +242,11 @@ def resolve_painting_expertise(request, pk):
 
 @api_view(['DELETE'])
 def delete_painting_expertise(request, pk):
-    """
-    Удаление косметического средства
-    """
+    
     expertise = Expertise.objects.filter(id=pk,
                                                   status=1).first()
     if expertise is None:
-        return Response("CosmeticOrder not found", status=status.HTTP_404_NOT_FOUND)
+        return Response("Заявка на экспертизу не найдена", status=status.HTTP_404_NOT_FOUND)
 
     expertise.status = 3
     expertise.save()
