@@ -11,7 +11,7 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Create expertises API",
         default_version='v1',
-        description="API for creating expertises",
+        description="API for creating painting_expertises",
         contact=openapi.Contact(email="sgrenkov39@gmail.com"),
         license=openapi.License(name="RIP License"),
     ),

@@ -3,6 +3,7 @@ from datetime import datetime
 from dateutil.parser import parse
 import uuid
 import random
+from django.utils import timezone
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -204,23 +205,11 @@ def form_painting_expertise(request, pk):
     expertise = get_object_or_404(Expertise, id=pk, status=Expertise.STATUS_CHOICES[0][0])
     if not expertise.author:
         return Response("Поле 'Автор' должно быть заполнено", status=status.HTTP_400_BAD_REQUEST)
-    if not are_valid_comments(pk):
-        return Response("Необходимо добавить комментарии ко всем картинам", status=status.HTTP_400_BAD_REQUEST)
     expertise.status = Expertise.STATUS_CHOICES[1][0]
     expertise.date_formation = datetime.now()
     expertise.save()
     serializer = CreatedExpertiseSerializer(expertise)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-def are_valid_comments(expertise_id):
-    """
-    Проверка: у всех картин в экспертизе должны быть комментарии
-    """
-    expertise_items = ExpertiseItem.objects.filter(expertise_id=expertise_id)
-    for item in expertise_items:
-        if not item.comment:
-            return False
-    return True
 
 @api_view(['PUT'])
 @permission_classes([IsManagerAuth])
@@ -230,14 +219,26 @@ def resolve_painting_expertise(request, pk):
     Закрытие заявки на экспертизу модератором
     """
     expertise = get_object_or_404(Expertise, pk=pk, status=2)
-    serializer = ResolveExpertiseSerializer(expertise, data=request.data, partial=True)
+    
+    # Генерация случайного результата
+    random_result = random.choice([True, False])
+    
+    # Определение нового статуса на основе случайного результата
+    new_status = Expertise.STATUS_CHOICES[3][0] if random_result else Expertise.STATUS_CHOICES[4][0]
+    
+    serializer = ResolveExpertiseSerializer(expertise, data={'status': new_status}, partial=True)
     if serializer.is_valid():
         serializer.save()
-        expertise.date_completion = datetime.now()
+        expertise.date_completion = timezone.now()
         expertise.manager = request.user
         expertise.save()
+        
+        # Обновление всех связанных ExpertiseItem
+        ExpertiseItem.objects.filter(expertise=expertise).update(result=random_result)
+        
         return Response(CreatedExpertiseSerializer(expertise).data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuth])
