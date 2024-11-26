@@ -14,6 +14,7 @@ from django.utils import timezone
 from artwork.models import Painting, Expertise, ExpertiseItem
 from django.db.models import Q
 from artwork.serializers import *
+import random
 from .minio import add_pic, delete_pic
 
 
@@ -46,15 +47,18 @@ class PaintingView(APIView):
     """
     Класс CRUD операций над картиной
     """
+    serializer_class = PaintingSerializer
+    model_class = Painting
+
     def get(self, request, pk=None, format=None):
         if pk is not None:
-            painting_data = get_object_or_404(Painting, pk=pk)
-            serializer = PaintingSerializer(painting_data)
+            painting_data = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(painting_data)
             return Response(serializer.data)
         else:
             result = get_paintings_list(request._request)
             return Response(result, status=status.HTTP_200_OK)
-    # Добавляет новую картину
+
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
@@ -62,20 +66,14 @@ class PaintingView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # Изменение информации об картине
     def put(self, request, pk, format=None):
-        painting = self.model_class.objects.filter(pk=pk).first()
-        if painting is None:
-            return Response("Картина не найдена", status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(
-            painting, data=request.data, partial=True)
+        painting = get_object_or_404(self.model_class, pk=pk)
+        serializer = self.serializer_class(painting, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # Удаление элемента вместе с изображением
     def delete(self, request, pk, format=None):
         painting = get_object_or_404(self.model_class, pk=pk)
         if painting.img_path:
@@ -84,7 +82,6 @@ class PaintingView(APIView):
                 return Response(deletion_result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         painting.delete()
         return Response({"message": "Картина и его изображение успешно удалены."}, status=status.HTTP_204_NO_CONTENT)
-
 
 @api_view(['POST'])
 def update_painting_image(request, pk):
@@ -200,31 +197,23 @@ def form_painting_expertise(request, pk):
 
     serializer = FormPaintingExpertiseSerializer(expertise, data=request.data, partial=True)
     if serializer.is_valid():
-        expertise.status = Expertise.STATUS_CHOICES[1][0]  # Предполагаем, что 1 индекс для 'Сформировано'
+        expertise.status = Expertise.STATUS_CHOICES[1][0]  # Предполагаем, что индекс 1 соответствует 'Сформировано'
         expertise.date_formation = timezone.now()
         expertise.save()
         return Response(FormPaintingExpertiseSerializer(expertise).data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-def are_valid_comments(expertise_id):
-    expertise = get_object_or_404(Expertise, id=expertise_id)
-    expertise_items = ExpertiseItem.objects.filter(expertise=expertise)
-    
-    for item in expertise_items:
-        if not item.comment:
-            return False
-    return True
 
 
 @api_view(['PUT'])
 def resolve_painting_expertise(request, pk):
     """
-    Закрытие заявки на экспертизу модератором
+    Закрытие Заявки на экспретизу модератором
     """
     expertise = Expertise.objects.filter(
         pk=pk, status=2).first()  # 2 - Сформировано
     if expertise is None:
-        return Response("Заявка на экспертизу не найдена или статус неверный", status=status.HTTP_404_NOT_FOUND)
+        return Response("Заявка на экспретизу не найдено или статус неверный", status=status.HTTP_404_NOT_FOUND)
 
     serializer = ResolveExpertiseSerializer(
         expertise, data=request.data, partial=True)

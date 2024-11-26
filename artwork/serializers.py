@@ -37,6 +37,8 @@ class PutPaintingExpertiseSerializer(serializers.ModelSerializer):
         read_only_fields = ['pk', 'user', 'status', 'date_created', 'date_formation', 'date_completion', 'manager']
 
 class FormPaintingExpertiseSerializer(serializers.ModelSerializer):
+    items = ExpertiseItemSerializer(many=True, read_only=True) 
+
     class Meta:
         model = Expertise
         fields = ['pk', 'user', 'status', 'author', 'manager', 'date_created', 'date_formation', 'date_completion', 'items']
@@ -45,9 +47,9 @@ class FormPaintingExpertiseSerializer(serializers.ModelSerializer):
     def validate(self, data):
         instance = self.instance
         if not instance.author:
-            raise serializers.ValidationError("Author is required to form the expertise.")
+            raise serializers.ValidationError("Автор обязателен для формирования экспертизы.")
         if not instance.items.exists():
-            raise serializers.ValidationError("At least one painting item is required to form the expertise.")
+            raise serializers.ValidationError("Для формирования экспертизы требуется как минимум один элемент картины.")
         return data
 
 
