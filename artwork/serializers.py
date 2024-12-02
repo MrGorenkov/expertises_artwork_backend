@@ -19,7 +19,7 @@ class CreatedExpertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expertise
         fields = ['id', 'user', 'status', 'date_created',
-                  'date_formation', 'date_completion', 'manager', 'author']
+                  'date_formation', 'date_completion', 'manager', 'author', 'result']
 
 
 class ExpertiseItemSerializer(serializers.ModelSerializer):
@@ -27,22 +27,22 @@ class ExpertiseItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExpertiseItem
-        fields = ['painting', 'comment', 'result']
+        fields = ['painting', 'comment']
 
 
 class PutPaintingExpertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expertise
         fields = ['author']
-        read_only_fields = ['pk', 'user', 'status', 'date_created', 'date_formation', 'date_completion', 'manager']
+        read_only_fields = ['pk', 'user', 'status', 'date_created', 'date_formation', 'date_completion', 'manager', 'result']
 
 class FormPaintingExpertiseSerializer(serializers.ModelSerializer):
     items = ExpertiseItemSerializer(many=True, read_only=True) 
 
     class Meta:
         model = Expertise
-        fields = ['pk', 'user', 'status', 'author', 'manager', 'date_created', 'date_formation', 'date_completion', 'items']
-        read_only_fields = ['pk', 'user', 'status', 'manager', 'date_created', 'date_completion']
+        fields = ['pk', 'user', 'status', 'author', 'result', 'manager', 'date_created', 'date_formation', 'date_completion', 'items']
+        read_only_fields = ['pk', 'user', 'status', 'manager', 'result','date_created', 'date_completion']
 
     def validate(self, data):
         instance = self.instance
@@ -55,7 +55,7 @@ class FormPaintingExpertiseSerializer(serializers.ModelSerializer):
 
 class ResolveExpertiseSerializer(serializers.ModelSerializer):
     def validate(self, data):
-        if data.get('status') not in (4, 5):  # 4 - Завершено, 5 - Отклонено
+        if data.get('status') not in (4, 5):  
             raise serializers.ValidationError("Invalid status")
         return data
 
@@ -88,7 +88,7 @@ class FullPaintingExpertiseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expertise
-        fields = ['pk', 'user', 'status', 'author', 'manager', 'date_created', 
+        fields = ['pk', 'user', 'status', 'author', 'result', 'manager', 'date_created', 
                   'date_formation', 'date_completion', 'items']
         
 class UserSerializer(serializers.ModelSerializer):

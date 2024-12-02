@@ -29,18 +29,24 @@ def get_paintings_list(request):
     title_query = request.GET.get('painting_title', '').lower()
 
     draft_expertise = Expertise.objects.filter(
-        user_id=request.user.id, status=Expertise.STATUS_CHOICES[0][0]).first()
+        user_id=SINGLETON_USER.id, status=Expertise.STATUS_CHOICES[0][0]).first()
 
     filter_paintings = Painting.objects.filter(
         title__istartswith=title_query)
 
     serializer = PaintingSerializer(filter_paintings, many=True)
 
-    expertise_count = draft_expertise.items.count() if draft_expertise else 0
+    
 
-    return {
-        'paintings': serializer.data,
-    }
+    return Response(
+        {
+            'paintings': serializer.data,
+            'expertise_count': draft_expertise.items.count() if draft_expertise else 0,
+            'expertise_id': draft_expertise.id if draft_expertise else None
+        },
+        status=status.HTTP_200_OK
+    )
+
 
 
 class PaintingView(APIView):
@@ -51,13 +57,24 @@ class PaintingView(APIView):
     model_class = Painting
 
     def get(self, request, pk=None, format=None):
-        if pk is not None:
-            painting_data = get_object_or_404(self.model_class, pk=pk)
-            serializer = self.serializer_class(painting_data)
-            return Response(serializer.data)
+        if pk is None:
+            queryset = self.model_class.objects.all()
+            title_query = request.query_params.get('painting_title', '').lower()
+            if title_query:
+                queryset = queryset.filter(title__istartswith=title_query)
+            paintings = self.serializer_class(queryset, many=True).data
         else:
-            result = get_paintings_list(request._request)
-            return Response(result, status=status.HTTP_200_OK)
+            painting_data = get_object_or_404(self.model_class, pk=pk)
+            paintings = [self.serializer_class(painting_data).data]
+
+        draft_expertise = Expertise.objects.filter(
+            user_id=SINGLETON_USER.id, status=Expertise.STATUS_CHOICES[0][0]).first()
+
+        return Response({
+            'paintings': paintings,
+            'expertise_count': draft_expertise.items.count() if draft_expertise else 0,
+            'expertise_id': draft_expertise.id if draft_expertise else None
+        }, status=status.HTTP_200_OK)
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
@@ -208,39 +225,50 @@ def form_painting_expertise(request, pk):
 @api_view(['PUT'])
 def resolve_painting_expertise(request, pk):
     """
-    Закрытие Заявки на экспретизу модератором
+    Закрытие или отклонение Заявки на экспертизу модератором
     """
     expertise = Expertise.objects.filter(
         pk=pk, status=2).first()  # 2 - Сформировано
     if expertise is None:
-        return Response("Заявка на экспретизу не найдено или статус неверный", status=status.HTTP_404_NOT_FOUND)
+        return Response("Заявка на экспертизу не найдена или статус неверный", status=status.HTTP_404_NOT_FOUND)
 
     serializer = ResolveExpertiseSerializer(
         expertise, data=request.data, partial=True)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer.save()
+    new_status = request.data.get('status', 4)  # По умолчанию 'Завершено'
+    if new_status not in [4, 5]:
+        return Response("Недопустимый статус. Допустимые значения: 4 (Завершено) или 5 (Отклонено)", 
+                        status=status.HTTP_400_BAD_REQUEST)
 
-    expertise.date_completion = datetime.now()
+    expertise.status = new_status
+    expertise.date_completion = timezone.now()
     expertise.manager = SINGLETON_MANAGER
-    expertise.save()
+    expertise.save()  # Это вызовет метод save() модели, который установит результат
 
     serializer = CreatedExpertiseSerializer(expertise)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @api_view(['DELETE'])
 def delete_painting_expertise(request, pk):
-    
-    expertise = Expertise.objects.filter(id=pk,
-                                                  status=1).first()
+    """
+    Удаление заявки на экспертизу (изменение статуса на "Удалено")
+    """
+    expertise = Expertise.objects.filter(id=pk).first()
     if expertise is None:
-        return Response("Заявка на экспертизу не найдена", status=status.HTTP_404_NOT_FOUND)
-
-    expertise.status = 3
+        return Response({"error": "Заявка на экспертизу не найдена"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if expertise.status != Expertise.STATUS_CHOICES[0][0]:  # Проверяем, что статус "Черновик"
+        return Response({"error": "Удалить можно только заявку в статусе 'Черновик'"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    expertise.status = Expertise.STATUS_CHOICES[2][0]  # Устанавливаем статус "Удалено"
+    expertise.date_formation = timezone.now()
     expertise.save()
-    return Response(status=status.HTTP_200_OK)
-
+    
+    serializer = CreatedExpertiseSerializer(expertise)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 ####################################################
 
