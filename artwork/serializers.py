@@ -19,7 +19,7 @@ class CreatedExpertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expertise
         fields = ['id', 'user', 'status', 'date_created',
-                  'date_formation', 'date_completion', 'manager', 'author']
+                  'date_formation', 'date_completion', 'manager', 'author', 'result']
 
 
 class ExpertiseItemSerializer(serializers.ModelSerializer):
@@ -27,20 +27,20 @@ class ExpertiseItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExpertiseItem
-        fields = ['painting', 'comment', 'result']
+        fields = ['painting', 'comment']
 
 
 class PutPaintingExpertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expertise
         fields = ['author']
-        read_only_fields = ['pk', 'user', 'status', 'date_created', 'date_formation', 'date_completion', 'manager']
+        read_only_fields = ['pk', 'user', 'status', 'date_created', 'date_formation', 'date_completion', 'manager', 'result']
 
 class FormPaintingExpertiseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expertise
-        fields = ['pk', 'user', 'status', 'author', 'manager', 'date_created', 'date_formation', 'date_completion', 'items']
-        read_only_fields = ['pk', 'user', 'status', 'manager', 'date_created', 'date_completion']
+        fields = ['pk', 'user', 'status', 'author', 'result', 'manager', 'date_created', 'date_formation', 'date_completion', 'items']
+        read_only_fields = ['pk', 'user', 'status', 'manager','result', 'date_created', 'date_completion']
 
     def validate(self, data):
         instance = self.instance
@@ -86,7 +86,7 @@ class FullPaintingExpertiseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expertise
-        fields = ['pk', 'user', 'status', 'author', 'manager', 'date_created', 
+        fields = ['pk', 'user', 'status', 'author','result', 'manager', 'date_created', 
                   'date_formation', 'date_completion', 'items']
         
 class UserSerializer(serializers.ModelSerializer):

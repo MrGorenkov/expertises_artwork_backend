@@ -216,29 +216,26 @@ def form_painting_expertise(request, pk):
 @authentication_classes([AuthBySessionID])
 def resolve_painting_expertise(request, pk):
     """
-    Закрытие заявки на экспертизу модератором
+    Закрытие или отклонение Заявки на экспертизу модератором
     """
-    expertise = get_object_or_404(Expertise, pk=pk, status=2)
+    expertise = get_object_or_404(Expertise, pk=pk, status=2)  # 2 - Сформировано
     
-    # Генерация случайного результата
-    random_result = random.choice([True, False])
-    
-    # Определение нового статуса на основе случайного результата
-    new_status = Expertise.STATUS_CHOICES[3][0] if random_result else Expertise.STATUS_CHOICES[4][0]
-    
-    serializer = ResolveExpertiseSerializer(expertise, data={'status': new_status}, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        expertise.date_completion = timezone.now()
-        expertise.manager = request.user
-        expertise.save()
-        
-        # Обновление всех связанных ExpertiseItem
-        ExpertiseItem.objects.filter(expertise=expertise).update(result=random_result)
-        
-        return Response(CreatedExpertiseSerializer(expertise).data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer = ResolveExpertiseSerializer(expertise, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    new_status = request.data.get('status', 4)  # По умолчанию 'Завершено'
+    if new_status not in [4, 5]:
+        return Response("Недопустимый статус. Допустимые значения: 4 (Завершено) или 5 (Отклонено)", 
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    expertise.status = new_status
+    expertise.date_completion = timezone.now()
+    expertise.manager = request.user
+    expertise.save()  # Это вызовет метод save() модели, который установит результат
+
+    serializer = CreatedExpertiseSerializer(expertise)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuth])
