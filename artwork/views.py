@@ -178,8 +178,27 @@ def get_painting_expertise(request, pk):
     expertise = Expertise.objects.filter(filters).first()
     if expertise is None:
         return Response("Экспертиза не найдена", status=status.HTTP_404_NOT_FOUND)
+    
     serializer = FullPaintingExpertiseSerializer(expertise)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    draft_expertise = Expertise.objects.filter(
+        user=request.user, 
+        status=Expertise.STATUS_CHOICES[0][0]).first()
+
+    count = 0
+    expertise_id = None
+
+    if draft_expertise:
+        count = draft_expertise.items.count()
+        expertise_id = draft_expertise.id
+
+    response_data = {
+        **serializer.data,
+        "count": count,
+        "expertise_id": expertise_id
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
 @permission_classes([IsAuth])
